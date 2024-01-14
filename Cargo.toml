@@ -1,0 +1,26 @@
+[package]
+name = "onebrc"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = { version = "1.0.79", optional = true }
+fxhash = { version = "0.2.1", optional = true }
+rand = { version = "0.8.5", optional = true }
+rand_distr = { version = "0.4.3", optional = true }
+rayon = "1.5.1"
+memmap = "0.7.0"
+dashmap = "5.5.3"
+
+[features]
+generator = ["anyhow", "rand", "rand_distr"]
+
+[[bin]]
+name = "generate"
+required-features = ["generator"]
+
+[[bin]]
+name = "1brc"
+path = "src/main.rs"

@@ -2,7 +2,9 @@ use std::{
     collections::HashMap,
     fs::File,
     io::{BufRead, BufReader},
+    num::NonZeroUsize,
     sync::{Arc, Mutex, RwLock},
+    thread,
 };
 
 use memmap::MmapOptions;
@@ -11,14 +13,12 @@ use rayon::prelude::*;
 use crate::solns::Temperature;
 
 pub fn soln1() {
-    let start = std::time::Instant::now();
-    // let cores = thread::available_parallelism().unwrap_or(NonZeroUsize::new(5).unwrap());
-    let cores = 5;
+    let cores = thread::available_parallelism().unwrap_or(NonZeroUsize::new(5).unwrap());
     let file = File::open("measurements.txt").expect("Failed opening file");
     let mmap = unsafe { MmapOptions::new().map(&file).expect("oops") };
     let records = Arc::new(RwLock::new(HashMap::<String, Mutex<Temperature>>::new()));
 
-    let mut chunks = vec![Vec::new(); cores];
+    let mut chunks = vec![Vec::new(); cores.into()];
     let mut chunk = Vec::new();
     let chunk_size = mmap.len() / cores;
     for line in BufReader::new(mmap.as_ref()).lines() {
@@ -32,8 +32,7 @@ pub fn soln1() {
     if !chunk.is_empty() {
         chunks.push(chunk);
     }
-    println!("chunking time: {}s", start.elapsed().as_secs_f32());
-    let start1 = std::time::Instant::now();
+
     chunks.par_iter_mut().for_each(|c| {
         process_chunk(c.to_vec(), Arc::clone(&records));
     });
@@ -42,11 +41,9 @@ pub fn soln1() {
     let mut keys = records.keys().collect::<Vec<_>>();
     keys.par_sort_unstable();
     keys.par_iter_mut().for_each(|key| {
-        let _t = records.get(*key).unwrap().lock().unwrap();
-        // println!("{}={:.1}/{:.1}/{:.1}", key, t.min, t.mean(), t.max);
+        let t = records.get(*key).unwrap().lock().unwrap();
+        println!("{}={:.1}/{:.1}/{:.1}", key, t.min, t.mean(), t.max);
     });
-    println!("computation time: {}s", start1.elapsed().as_secs_f32());
-    println!("total time: {}s", start.elapsed().as_secs_f32());
 }
 
 fn process_chunk(chunk: Vec<String>, data: Arc<RwLock<HashMap<String, Mutex<Temperature>>>>) {

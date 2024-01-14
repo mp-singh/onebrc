@@ -1,5 +1,6 @@
 pub mod soln1;
 pub mod soln2;
+pub mod soln3;
 
 #[derive(Debug)]
 pub struct Temperature {

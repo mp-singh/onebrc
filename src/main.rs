@@ -1,8 +1,7 @@
-use solns::soln1::soln1;
-use solns::soln2::soln2;
+use onebrc::solns::{soln1::soln1, soln3::soln3};
 
-mod solns;
 fn main() {
     // soln1();
-    soln2();
+    // soln2();
+    soln3();
 }

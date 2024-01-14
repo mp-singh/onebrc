@@ -34,23 +34,20 @@ pub fn soln2() {
         chunks.push(chunk);
     }
 
-    // let lt = Lifetime {
-    //     chunks: chunks.iter().map(|c| c.iter().map(|x| x.as_str()).collect()).collect(),
-    //     data: records.iter().map(|(k, v)| (k.as_str(), v.clone())).collect(),
-    // };
-    println!("lines: {}", chunks.iter().map(|c| c.len()).sum::<usize>());
-    println!("chunking time: {}s", start.elapsed().as_secs_f32());
     let start1 = std::time::Instant::now();
     chunks.par_iter().for_each(|c| {
         let data = Arc::new(&records);
         process_chunk(c.par_iter().map(|x| x.as_str()).collect(), &data);
     });
 
-    let mut keys = records.iter().map(|key| key.key().clone()).collect::<Vec<_>>();
+    let mut keys = records
+        .iter()
+        .map(|key| key.key().clone())
+        .collect::<Vec<_>>();
     keys.par_sort_unstable();
     for key in keys {
-        let _t = records.get(&key).unwrap();
-        // println!("{}={:.1}/{:.1}/{:.1}", key, t.min, t.mean(), t.max);
+        let t = records.get(&key).unwrap();
+        println!("{}={:.1}/{:.1}/{:.1}", key, t.min, t.mean(), t.max);
     }
     println!("computation time: {}s", start1.elapsed().as_secs_f32());
     println!("total time: {}s", start.elapsed().as_secs_f32());
@@ -75,10 +72,4 @@ fn process_chunk(chunk: Vec<&str>, data: &HashMap<String, Temperature>) {
             data.insert(name, Temperature::new(temp, temp, temp));
         }
     }
-}
-
-
-struct Lifetime<'a> {
-    pub chunks: Vec<Vec<&'a str>>,
-    pub data: HashMap<&'a str, Temperature>,
 }

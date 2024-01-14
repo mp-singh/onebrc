@@ -13,6 +13,11 @@ rand_distr = { version = "0.4.3", optional = true }
 rayon = "1.5.1"
 memmap = "0.7.0"
 dashmap = "5.5.3"
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "my_benchmark"
+harness = false
 
 [features]
 generator = ["anyhow", "rand", "rand_distr"]

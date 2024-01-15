@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use criterion::{criterion_group, criterion_main, Criterion};
+#[warn(unused_imports)]
 use onebrc::solns::{soln1::soln1, soln2::soln2, soln3::soln3};
 
 fn criterion_benchmark(c: &mut Criterion) {

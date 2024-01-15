@@ -1,7 +1,6 @@
-use onebrc::solns::{soln1::soln1, soln3::soln3};
+use onebrc::solns::soln2::soln2;
 
 fn main() {
-    // soln1();
-    // soln2();
-    soln3();
+    //fastest solution thus far.
+    soln2();
 }

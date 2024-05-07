@@ -8,7 +8,7 @@ use fxhash::FxHashMap;
 
 pub fn soln() {
     let start = std::time::Instant::now();
-    let file = File::open("measurements_1b.txt").expect("Failed opening file");
+    let file = File::open("measurements.txt").expect("Failed opening file");
     let mmap = unsafe { MmapOptions::new().map(&file).expect("oops") };
     let data: Arc<Mmap> = Arc::new(mmap);
     let num_threads = 8; // only want to use 8.
@@ -34,7 +34,7 @@ pub fn soln() {
     let mut results = merge_hashmaps(thread_data)
         .into_values()
         .collect::<Vec<_>>();
-    results.sort_by_key(|t| t.name.clone());
+    results.sort_unstable_by_key(|t| t.name.clone());
 
     results.into_iter().enumerate().for_each(|(_, t)| {
         let name = unsafe { std::str::from_utf8_unchecked(&t.name) };
@@ -56,20 +56,21 @@ pub fn soln() {
 fn merge_hashmaps(thread_data: Vec<FxHashMap<Name, Temperature>>) -> FxHashMap<Name, Temperature> {
     // let mut hashmap = FxHashMap::default();
     let mut record: FxHashMap<Name, Temperature> =
-        FxHashMap::with_capacity_and_hasher(10_000, Default::default());
+        FxHashMap::with_capacity_and_hasher(128, Default::default());
 
     for t in thread_data {
         for (key, value) in t {
-            let t = record
-                .entry(key.clone())
-                .or_insert(Temperature::new(key, value.min));
-            t.sum += value.sum;
-            t.count += value.count;
-            if t.min > value.min {
-                t.min = value.min;
-            }
-            if t.max < value.max {
-                t.max = value.max;
+            if let Some(t) = record.get_mut(&key) {
+                t.sum += value.sum;
+                t.count += value.count;
+                if t.min > value.min {
+                    t.min = value.min;
+                }
+                if t.max < value.max {
+                    t.max = value.max;
+                }
+            } else {
+                record.insert(key.clone(), Temperature::new(key, value.min));
             }
         }
     }
@@ -88,19 +89,29 @@ fn split_file(num_of_threads: usize, data: &[u8]) -> Vec<usize> {
 fn process(start: usize, end: usize, data: Arc<Mmap>) -> FxHashMap<Name, Temperature> {
     let data = &data[start..end];
     let mut record: FxHashMap<Name, Temperature> =
-        FxHashMap::with_capacity_and_hasher(1000, Default::default());
+        FxHashMap::with_capacity_and_hasher(128, Default::default());
     let mut last_pos = 0;
     for next_pos in memchr_iter(b'\n', data) {
         let line = &data[last_pos..next_pos];
         last_pos = next_pos + 1;
 
-        let line = unsafe { std::str::from_utf8_unchecked(line) };
-        let (name, temp) = line.split_once(';').unwrap();
+        let mut split = line.split(|&c| c == b';');
+        let (name, temp) = (split.next().unwrap(), split.next().unwrap());
+        let temp = unsafe { std::str::from_utf8_unchecked(temp) };
         let temp = parse_decimal_to_integer_optimized(temp);
-        let t = record
-            .entry(name.as_bytes().to_vec())
-            .or_insert(Temperature::new(name.into(), temp));
-        t.update(temp);
+        if let Some(t) = record.get_mut(name) {
+            t.sum += temp;
+            t.count += 1;
+            if t.min > temp {
+                t.min = temp;
+                continue;
+            }
+            if t.max < temp {
+                t.max = temp;
+            }
+        } else {
+            record.insert(name.to_vec(), Temperature::new(name.to_vec(), temp));
+        }
     }
     record
 }

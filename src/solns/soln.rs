@@ -39,7 +39,7 @@ pub fn soln() {
     results.into_iter().enumerate().for_each(|(_, t)| {
         let name = unsafe { std::str::from_utf8_unchecked(&t.name) };
         println!(
-            "{}={}/{}/{}",
+            "{}={:.1}/{:.1}/{:.1}",
             name,
             t.min as f32 / 10.0,
             t.mean() as f32 / 10.0,

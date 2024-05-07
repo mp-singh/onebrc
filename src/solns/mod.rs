@@ -23,15 +23,4 @@ impl Temperature {
     pub fn mean(&self) -> i16 {
         self.sum / self.count as i16
     }
-    pub fn update(&mut self, temp: i16) {
-        self.sum += temp;
-        self.count += 1;
-        if self.min > temp {
-            self.min = temp;
-            return;
-        }
-        if self.max < temp {
-            self.max = temp;
-        }
-    }
 }

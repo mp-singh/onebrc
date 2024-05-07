@@ -1,89 +1,17 @@
-// use std::io::Read;
-// use std::sync::Mutex;
-// use std::{
-//     collections::HashMap,
-//     fs::File,
-//     io::{BufRead, BufReader},
-// };
-
-// use itertools::Itertools;
-// use memmap::Mmap;
-// use rayon::iter::ParallelBridge;
-// use rayon::vec;
-// use rayon::{iter::IntoParallelRefIterator, slice::ParallelSliceMut};
-
 use crate::{parse_decimal_to_integer_optimized, solns::Temperature};
-
-// pub fn soln3() {
-//     let start = std::time::Instant::now();
-//     let chunk_size = 1_000_000;
-//     let file = File::open("measurements_1b.txt").unwrap();
-//     let mmap = unsafe { Mmap::map(&file).unwrap() };
-//     // let mut count = 0;
-//     // for _ in mmap.split(|c| *c as char == '\n') {
-//     //     //println!("{}", line);
-//     //     count += 1;
-//     // }
-//     // println!("{:?}", start.elapsed());
-
-//     let lines = mmap.lines().chunks(chunk_size);
-
-//     let mut records = HashMap::<String, Temperature>::with_capacity(10_000);
-//     lines.into_iter().for_each(|chunks| {
-//         for line in chunks {
-//             let line = line.unwrap();
-//             let (name, temp) = line.split_once(';').unwrap();
-//             let temp = parse_decimal_to_integer_optimized(temp);
-//             if let Some(t) = records.get_mut(name) {
-//                 t.sum += temp;
-//                 t.count += 1;
-//                 if t.min > temp {
-//                     t.min = temp;
-//                     return;
-//                 }
-//                 if t.max < temp {
-//                     t.max = temp;
-//                 }
-//             } else {
-//                 records.insert(name.to_string(), Temperature::new(temp));
-//             }
-//         }
-//     });
-
-//     let mut keys = records.keys().collect::<Vec<_>>();
-//     keys.par_sort_unstable();
-//     for key in keys {
-//         let t = records.get(key).unwrap();
-//         println!(
-//             "{}={}/{}/{}",
-//             key,
-//             t.min as f32 / 10.0,
-//             t.mean() as f32 / 10.0,
-//             t.max as f32 / 10.0
-//         );
-//     }
-//     println!("\nsoln3: {:?}", start.elapsed());
-//     // std::process::exit(0); // comment out this line to benchmark
-// }
-
-use std::{
-    collections::HashMap,
-    fs::File,
-    sync::{
-        atomic::{self, AtomicUsize},
-        Arc,
-    },
-};
-
 use memchr::{memchr, memchr_iter};
 use memmap::{Mmap, MmapOptions};
+use std::{fs::File, sync::Arc};
+
+use super::Name;
+use fxhash::FxHashMap;
 
 pub fn soln() {
     let start = std::time::Instant::now();
     let file = File::open("measurements_1b.txt").expect("Failed opening file");
     let mmap = unsafe { MmapOptions::new().map(&file).expect("oops") };
     let data: Arc<Mmap> = Arc::new(mmap);
-    let num_threads = 8;
+    let num_threads = 8; // only want to use 8.
     println!("Number of threads: {}", num_threads);
     let positions = split_file(num_threads, &data);
 
@@ -102,29 +30,46 @@ pub fn soln() {
         .collect::<Vec<_>>();
 
     println!("time taken for processing: {:?}", start.elapsed());
-    // measure time taken to merge the hashmaps
     let start_merge = std::time::Instant::now();
-    merge_hashmaps(thread_data);
-    println!("time taken for merging: {:?}", start_merge.elapsed());
-    println!("Time taken: {:?}", start.elapsed());
+    let mut results = merge_hashmaps(thread_data)
+        .into_values()
+        .collect::<Vec<_>>();
+    results.sort_by_key(|t| t.name.clone());
+
+    results.into_iter().enumerate().for_each(|(_, t)| {
+        let name = unsafe { std::str::from_utf8_unchecked(&t.name) };
+        println!(
+            "{}={}/{}/{}",
+            name,
+            t.min as f32 / 10.0,
+            t.mean() as f32 / 10.0,
+            t.max as f32 / 10.0
+        );
+    });
+    println!(
+        "\nTime taken for merging and printing: {:?}",
+        start_merge.elapsed()
+    );
+    println!("Total time taken: {:?}", start.elapsed());
 }
 
-fn merge_hashmaps(thread_data: Vec<HashMap<String, Temperature>>) -> HashMap<String, Temperature> {
-    let mut record: HashMap<String, Temperature> = HashMap::with_capacity(10_000);
+fn merge_hashmaps(thread_data: Vec<FxHashMap<Name, Temperature>>) -> FxHashMap<Name, Temperature> {
+    // let mut hashmap = FxHashMap::default();
+    let mut record: FxHashMap<Name, Temperature> =
+        FxHashMap::with_capacity_and_hasher(10_000, Default::default());
+
     for t in thread_data {
-        for (k, v) in t {
-            if let Some(t) = record.get_mut(&k) {
-                t.sum += v.sum;
-                t.count += v.count;
-                if t.min > v.min {
-                    t.min = v.min;
-                    continue;
-                }
-                if t.max < v.max {
-                    t.max = v.max;
-                }
-            } else {
-                record.insert(k, v);
+        for (key, value) in t {
+            let t = record
+                .entry(key.clone())
+                .or_insert(Temperature::new(key, value.min));
+            t.sum += value.sum;
+            t.count += value.count;
+            if t.min > value.min {
+                t.min = value.min;
+            }
+            if t.max < value.max {
+                t.max = value.max;
             }
         }
     }
@@ -140,30 +85,22 @@ fn split_file(num_of_threads: usize, data: &[u8]) -> Vec<usize> {
     split_points
 }
 
-fn process(start: usize, end: usize, data: Arc<Mmap>) -> HashMap<String, Temperature> {
+fn process(start: usize, end: usize, data: Arc<Mmap>) -> FxHashMap<Name, Temperature> {
     let data = &data[start..end];
-    let mut record: HashMap<String, Temperature> = HashMap::new();
+    let mut record: FxHashMap<Name, Temperature> =
+        FxHashMap::with_capacity_and_hasher(1000, Default::default());
     let mut last_pos = 0;
     for next_pos in memchr_iter(b'\n', data) {
         let line = &data[last_pos..next_pos];
         last_pos = next_pos + 1;
 
-        let line = std::str::from_utf8(line).unwrap();
+        let line = unsafe { std::str::from_utf8_unchecked(line) };
         let (name, temp) = line.split_once(';').unwrap();
         let temp = parse_decimal_to_integer_optimized(temp);
-        if let Some(t) = record.get_mut(name) {
-            t.sum += temp;
-            t.count += 1;
-            if t.min > temp {
-                t.min = temp;
-                continue;
-            }
-            if t.max < temp {
-                t.max = temp;
-            }
-        } else {
-            record.insert(name.to_string(), Temperature::new(temp));
-        }
+        let t = record
+            .entry(name.as_bytes().to_vec())
+            .or_insert(Temperature::new(name.into(), temp));
+        t.update(temp);
     }
     record
 }

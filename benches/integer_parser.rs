@@ -7,6 +7,9 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("parse_decimal_str_to_integer_optimized", |b| {
         b.iter(|| parse_decimal_to_integer_optimized("-12345.6"))
     });
+    c.bench_function("parse_decial_v2", |b| {
+        b.iter(|| onebrc::parse_decimal_v2("-12345.6"))
+    });
     c.bench_function("parse_decimal_str_to_float_std_lib", |b| {
         b.iter(|| "-12345.6".parse::<f32>().unwrap())
     });

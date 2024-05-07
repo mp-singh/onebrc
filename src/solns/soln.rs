@@ -36,7 +36,7 @@ pub fn soln() {
         .collect::<Vec<_>>();
     results.sort_unstable_by_key(|t| t.name.clone());
 
-    results.into_iter().enumerate().for_each(|(_, t)| {
+    results.into_iter().for_each(|t: Temperature| {
         let name = unsafe { std::str::from_utf8_unchecked(&t.name) };
         println!(
             "{}={:.1}/{:.1}/{:.1}",
@@ -54,7 +54,6 @@ pub fn soln() {
 }
 
 fn merge_hashmaps(thread_data: Vec<FxHashMap<Name, Temperature>>) -> FxHashMap<Name, Temperature> {
-    // let mut hashmap = FxHashMap::default();
     let mut record: FxHashMap<Name, Temperature> =
         FxHashMap::with_capacity_and_hasher(128, Default::default());
 

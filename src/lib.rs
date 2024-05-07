@@ -1,8 +1,8 @@
 pub mod solns;
 
-pub fn parse_decimal_to_integer_optimized(decimal_str: &str) -> i16 {
+#[inline]
+pub fn parse_decimal_to_integer_optimized(bytes: &[u8]) -> i16 {
     let mut result = 0i16;
-    let bytes = decimal_str.as_bytes();
     let mut start_index = 0;
 
     // Check if the string is negative
@@ -42,10 +42,10 @@ mod tests {
 
     #[test]
     fn test_parse_decimal_to_integer_optimized() {
-        assert_eq!(parse_decimal_to_integer_optimized("123"), 123);
-        assert_eq!(parse_decimal_to_integer_optimized("-123"), -123);
-        assert_eq!(parse_decimal_to_integer_optimized("0"), 0);
-        assert_eq!(parse_decimal_to_integer_optimized("0.0"), 0);
+        assert_eq!(parse_decimal_to_integer_optimized(b"123"), 123);
+        assert_eq!(parse_decimal_to_integer_optimized(b"-123"), -123);
+        assert_eq!(parse_decimal_to_integer_optimized(b"0"), 0);
+        assert_eq!(parse_decimal_to_integer_optimized(b"0.0"), 0);
     }
     #[test]
     fn test_parse_decimal_v2() {

@@ -1,24 +1,22 @@
-pub mod soln1;
-pub mod soln2;
-pub mod soln3;
+pub mod soln;
 
 #[derive(Debug)]
 pub struct Temperature {
-    pub min: f32,
-    pub sum: f32,
-    pub max: f32,
+    pub min: i16,
+    pub sum: i16,
+    pub max: i16,
     pub count: u32,
 }
 impl Temperature {
-    pub fn new(min: f32, sum: f32, max: f32) -> Self {
+    pub fn new(temp: i16) -> Self {
         Self {
-            min,
-            sum,
-            max,
+            min: temp,
+            sum: temp,
+            max: temp,
             count: 1,
         }
     }
-    pub fn mean(&self) -> f32 {
-        self.sum / self.count as f32
+    pub fn mean(&self) -> i16 {
+        self.sum / self.count as i16
     }
 }

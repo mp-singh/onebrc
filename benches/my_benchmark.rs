@@ -1,15 +1,15 @@
 use std::time::Duration;
 
 use criterion::{criterion_group, criterion_main, Criterion};
-#[warn(unused_imports)]
-use onebrc::solns::{soln1::soln1, soln2::soln2, soln3::soln3};
+use onebrc::parse_decimal_to_integer_optimized;
 
 fn criterion_benchmark(c: &mut Criterion) {
-    let mut group = c.benchmark_group("soln");
-    // group.bench_function("soln1", |b| b.iter(soln1));
-    group.bench_function("soln2", |b| b.iter(soln2));
-    // group.bench_function("soln3", |b| b.iter(soln3));
-    group.finish();
+    c.bench_function("parse_decimal_str_to_integer_optimized", |b| {
+        b.iter(|| parse_decimal_to_integer_optimized("-12345.6"))
+    });
+    c.bench_function("parse_decimal_str_to_float_std_lib", |b| {
+        b.iter(|| "-12345.6".parse::<f32>().unwrap())
+    });
 }
 
 criterion_group! {

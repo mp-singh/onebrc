@@ -1,4 +1,4 @@
-use onebrc::solns::soln::soln;
+use onebrc::soln;
 
 fn main() {
     soln();

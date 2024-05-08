@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use onebrc::solns::soln::soln;
+use onebrc::soln;
 
 fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("solution_one_million", |b| b.iter(soln));

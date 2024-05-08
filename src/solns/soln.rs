@@ -10,13 +10,15 @@ use std::{
 
 use super::Name;
 use fxhash::FxHashMap;
+const UNIQUE_STATIONS: usize = 512; // although there are only 413 unique stations, we can use 512 to reduce any potential collisions
 
 pub fn soln() {
     let start = std::time::Instant::now();
     let file = File::open("measurements_1b.txt").expect("Failed opening file");
     let mmap = unsafe { MmapOptions::new().map(&file).expect("oops") };
     let data: Arc<Mmap> = Arc::new(mmap);
-    let num_threads = 8; // only want to use 8.
+    // let num_threads = 8; // only want to use 8.
+    let num_threads = num_cpus::get();
     println!("Number of threads: {}", num_threads);
     let positions = split_file(num_threads, &data);
 
@@ -60,7 +62,7 @@ pub fn soln() {
 #[inline]
 fn merge_hashmaps(thread_data: Vec<FxHashMap<Name, Temperature>>) -> FxHashMap<Name, Temperature> {
     let mut record: FxHashMap<Name, Temperature> =
-        FxHashMap::with_capacity_and_hasher(128, Default::default());
+        FxHashMap::with_capacity_and_hasher(UNIQUE_STATIONS, Default::default());
     for t in thread_data {
         for (key, value) in t {
             if let Some(t) = record.get_mut(&key) {
@@ -107,7 +109,7 @@ fn split_file(num_of_threads: usize, data: &[u8]) -> Vec<usize> {
 fn process(start: usize, end: usize, data: Arc<Mmap>) -> FxHashMap<Name, Temperature> {
     let data = &data[start..end];
     let mut record: FxHashMap<Name, Temperature> =
-        FxHashMap::with_capacity_and_hasher(128, Default::default());
+        FxHashMap::with_capacity_and_hasher(UNIQUE_STATIONS, Default::default());
     let mut last_pos = 0;
     for next_pos in memchr_iter(b'\n', data) {
         let line = &data[last_pos..next_pos];
